@@ -38,8 +38,19 @@ const getEmi = asyncHandler(async (req, res) => {
     let remainingPrincipal = principal;
     let totalInterestPaid = 0;
     const monthDetails = [];
+    let yearIndex = 0;
+    let deflatedEmi = emi; // Initially set to the original EMI for the first year
 
     for (let i = 1; i <= tenure; i++) {
+        // At the beginning of each year, recalculate deflated EMI
+        if ((i - 1) % 12 === 0) {
+            yearIndex++;
+            deflatedEmi =
+                inflationRate > 0 && yearIndex > 1
+                    ? emi / Math.pow(1 + inflationRate / 100, yearIndex - 1)
+                    : emi;
+        }
+
         const interestPaid = remainingPrincipal * monthlyRate;
         const principalPaid = emi - interestPaid;
         remainingPrincipal -= principalPaid;
@@ -52,15 +63,10 @@ const getEmi = asyncHandler(async (req, res) => {
             interestPaid: interestPaid.toFixed(2),
             principalPaid: principalPaid.toFixed(2),
             remainingPrincipal: remainingPrincipal >= 0 ? remainingPrincipal.toFixed(2) : "0.00",
+            inflationAdjustedEmi: deflatedEmi.toFixed(2), // Same deflated EMI for all months in the year
+            year: yearIndex,
         };
 
-        // Add deflatedEmi only if inflationRate > 0
-        if (inflationRate > 0) {
-            const deflatedEmi = emi / Math.pow(1 + inflationRate / 100, (i - 1) / 12);
-            monthDetail.deflatedEmi = deflatedEmi.toFixed(2);
-        }
-
-        // Store month-by-month details
         monthDetails.push(monthDetail);
     }
 
@@ -75,8 +81,9 @@ const getEmi = asyncHandler(async (req, res) => {
         totalPayment: totalPayment.toFixed(2),
         totalInterestPaid: totalInterestPaid.toFixed(2),
         roundOffAdjustment: Math.abs(totalPayment.toFixed(2) - (emi * months)).toFixed(4),
-        monthDetails,
+        monthDetails, // Month-by-month details including deflated EMI
     });
 });
+
 
 module.exports = { getEmi };
