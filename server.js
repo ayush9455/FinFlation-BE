@@ -5,7 +5,9 @@ const app = express();
 const port = process.env.PORT || 5002;
 const emiRoutes = require("./routes/emiRoutes");
 const sipRoutes = require("./routes/sipRoutes");
+const cors = require('cors');
 
+app.use(cors());
 app.use(express.json());
 app.use("/api/sip", sipRoutes);
 app.use("/api/emi", emiRoutes);
